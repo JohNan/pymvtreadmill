@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Modern Async driver for Mobvoi/Horizon treadmills (Python 3.13+)"
 readme = "README.md"
 requires-python = ">=3.13"
-authors = [{name = "Jules", email = "jules@example.com"}]
+authors = [{name = "JohNan", email = "johan.nanzen@gmail.com"}]
 dependencies = [
     "bleak>=0.22.0",
 ]
