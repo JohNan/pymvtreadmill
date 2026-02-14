@@ -9,6 +9,7 @@
 
 ### 2. Architecture & Tech Stack
 - **Language**: Python 3.13+ (Strict requirement).
+- **Tooling**: `uv` for dependency management and scripts.
 - **Core Library**: `bleak` (BLE).
 - **Concurrency**: `asyncio` with **Structured Concurrency** (`asyncio.TaskGroup`).
 - **Typing**: Strict static typing using modern syntax (`type`, `|`, `Self`).
@@ -22,7 +23,7 @@
 * **Data Parsing**:
     * **Mobvoi**: Speed resolution **0.01 km/h** (Bytes 3-4, Big Endian).
     * **Horizon**: Speed resolution **0.1 km/h**.
-    * *Agent Note*: Default to Mobvoi resolution but allow configuration via `TreadmillConfig`.
+    * *Agent Note*: Default to Mobvoi resolution.
 
 ### 4. Coding Standards (Modern Python)
 1.  **Type Aliases**: Use the `type` keyword (Python 3.12+).
@@ -42,6 +43,7 @@
 
 ### 5. Verification Commands
 Before submitting code:
-- **Linting**: `ruff check .`
-- **Formatting**: `black .`
-- **Type Check**: `mypy .`
+- **Linting**: `uv run ruff check .`
+- **Formatting**: `uv run black .`
+- **Type Check**: `uv run mypy .`
+- **Tests**: `uv run pytest`
