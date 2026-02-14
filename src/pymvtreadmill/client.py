@@ -20,15 +20,22 @@ class TreadmillClient:
         self,
         name_filter: str = "Mobvoi",
         on_speed_change: Callable[[float], Awaitable[None]] | None = None,
+        on_raw_data: Callable[[bytes], Awaitable[None]] | None = None,
     ) -> None:
         self.client: BleakClient | None = None
         self.speed: float = 0.0
         self.is_running: bool = False
+        self._last_raw_data: bytes | None = None
         self._name_filter = name_filter
         self._on_speed_change = on_speed_change
+        self._on_raw_data = on_raw_data
         # Configure logging to standard out for this script
-        logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
         self._logger = logging.getLogger("pymvtreadmill")
+
+    @property
+    def last_raw_data(self) -> bytes | None:
+        """Returns the last received raw data packet."""
+        return self._last_raw_data
 
     async def connect(self, address: str | None = None) -> Self:
         """Connects to the treadmill. Returns self for chaining."""
@@ -49,6 +56,15 @@ class TreadmillClient:
         self.client = BleakClient(device, disconnected_callback=self._on_disconnect)
         await self.client.connect()
         self._logger.info(f"Connected to {device.name} ({device.address})")
+
+        # Log all services and characteristics for discovery
+        self._logger.info("Discovered Services:")
+        for service in self.client.services:
+            self._logger.info(f"Service: {service.uuid} ({service.description})")
+            for char in service.characteristics:
+                self._logger.info(
+                    f"  - Char: {char.uuid} (Props: {char.properties}) - {char.description}"
+                )
 
         # Start listening
         await self.client.start_notify(TreadmillUUID.READ, self._handle_data)
@@ -75,6 +91,10 @@ class TreadmillClient:
 
     async def _handle_data(self, sender: BleakGATTCharacteristic, data: bytearray) -> None:
         """Parses notification data from the treadmill."""
+        self._last_raw_data = bytes(data)
+        if self._on_raw_data:
+            await self._on_raw_data(self._last_raw_data)
+
         # AGENTS.md: Speed resolution 0.01 km/h (Bytes 3-4, Big Endian).
         if len(data) < 4:
             return
@@ -89,7 +109,7 @@ class TreadmillClient:
             if self._on_speed_change:
                 await self._on_speed_change(self.speed)
 
-            # self._logger.debug(f"Received data: {data.hex()} -> Speed: {self.speed} km/h")
+            self._logger.debug(f"Received data: {data.hex()} -> Speed: {self.speed} km/h")
         except Exception as e:
             self._logger.error(f"Failed to parse data {data.hex()}: {e}")
 
