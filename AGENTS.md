@@ -3,25 +3,26 @@
 ## 🤖 AI Agent & Developer Guide
 
 ### 1. Project Mission
-This repository hosts a Python library for controlling **Mobvoi** and **Horizon** treadmills via Bluetooth Low Energy (BLE).
+**pymvtreadmill** is a modern, async Python library for controlling and reading data from **Mobvoi Home Treadmills** and compatible **Horizon** fitness devices via Bluetooth Low Energy (BLE).
 - **Origin**: Ported from [qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift) (C++).
-- **Goal**: A modern, asyncio-native Python driver for 2026+ standards.
+- **Goal**: Provide a robust, structured-concurrency based driver for integration with Home Assistant, Zwift bridges, or custom dashboards.
 
 ### 2. Architecture & Tech Stack
 - **Language**: Python 3.13+ (Strict requirement).
 - **Core Library**: `bleak` (BLE).
 - **Concurrency**: `asyncio` with **Structured Concurrency** (`asyncio.TaskGroup`).
 - **Typing**: Strict static typing using modern syntax (`type`, `|`, `Self`).
+- **Linting/Formatting**: `ruff` and `black`.
 
 ### 3. Critical Protocol Knowledge
 * **UUIDs**:
     * Service: `0000ffb0-0000-1000-8000-00805f9b34fb`
-    * Read/Notif: `0000ffb2...`
-    * Write: `0000ffb1...`
+    * Read/Notify: `0000ffb2-0000-1000-8000-00805f9b34fb`
+    * Write: `0000ffb1-0000-1000-8000-00805f9b34fb`
 * **Data Parsing**:
-    * **Mobvoi**: Speed resolution **0.01 km/h** (Bytes 3-4).
+    * **Mobvoi**: Speed resolution **0.01 km/h** (Bytes 3-4, Big Endian).
     * **Horizon**: Speed resolution **0.1 km/h**.
-    * *Agent Note*: Default to Mobvoi resolution but allow configuration.
+    * *Agent Note*: Default to Mobvoi resolution but allow configuration via `TreadmillConfig`.
 
 ### 4. Coding Standards (Modern Python)
 1.  **Type Aliases**: Use the `type` keyword (Python 3.12+).
@@ -36,12 +37,11 @@ This repository hosts a Python library for controlling **Mobvoi** and **Horizon*
     ```python
     async with asyncio.TaskGroup() as tg:
         tg.create_task(self.read_loop())
-        tg.create_task(self.keep_alive())
     ```
 4.  **Enums**: Use `StrEnum` for command constants.
 
 ### 5. Verification Commands
 Before submitting code:
-- **Linting**: `ruff check .` (Preferred over flake8 for speed/modernity).
+- **Linting**: `ruff check .`
 - **Formatting**: `black .`
 - **Type Check**: `mypy .`
