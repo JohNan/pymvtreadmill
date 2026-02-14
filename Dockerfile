@@ -20,5 +20,8 @@ COPY . .
 # --system to install into the system python environment
 RUN uv pip install --system .
 
-# Default command
-CMD ["python", "examples/basic_run.py"]
+# Set entrypoint to the installed CLI tool
+ENTRYPOINT ["pymvtreadmill"]
+
+# Default arguments (show help if no args provided)
+CMD ["--help"]
