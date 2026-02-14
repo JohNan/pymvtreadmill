@@ -21,6 +21,41 @@ uv pip install pymvtreadmill
 pip install pymvtreadmill
 ```
 
+## Running with Docker
+
+You can run the project using Docker. This is useful if you want to run the treadmill controller in an isolated environment.
+
+### Prerequisites
+- Docker installed on your machine.
+- A Bluetooth adapter compatible with Linux (BlueZ).
+
+### Building the Image
+```bash
+docker build -t pymvtreadmill .
+```
+
+### Running the Container
+To access the Bluetooth adapter from within the container, you need to share the DBus socket and run in privileged mode (or with `NET_ADMIN` capabilities).
+
+```bash
+docker run --rm -it \
+  --net=host \
+  --privileged \
+  -v /var/run/dbus:/var/run/dbus \
+  pymvtreadmill
+```
+
+The default command runs the example script `examples/basic_run.py`. To run a custom script, you can mount it:
+
+```bash
+docker run --rm -it \
+  --net=host \
+  --privileged \
+  -v /var/run/dbus:/var/run/dbus \
+  -v $(pwd)/my_script.py:/app/my_script.py \
+  pymvtreadmill python my_script.py
+```
+
 ## Usage
 
 ```python
