@@ -1,5 +1,6 @@
 import logging
 import struct
+from collections.abc import Awaitable, Callable
 from types import TracebackType
 from typing import Self
 
@@ -15,11 +16,16 @@ type TreadmillData = bytearray | bytes
 
 
 class TreadmillClient:
-    def __init__(self, name_filter: str = "Mobvoi") -> None:
+    def __init__(
+        self,
+        name_filter: str = "Mobvoi",
+        on_speed_change: Callable[[float], Awaitable[None]] | None = None,
+    ) -> None:
         self.client: BleakClient | None = None
         self.speed: float = 0.0
         self.is_running: bool = False
         self._name_filter = name_filter
+        self._on_speed_change = on_speed_change
         # Configure logging to standard out for this script
         logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
         self._logger = logging.getLogger("pymvtreadmill")
@@ -67,7 +73,7 @@ class TreadmillClient:
 
         await self.client.write_gatt_char(TreadmillUUID.WRITE, payload)
 
-    def _handle_data(self, sender: BleakGATTCharacteristic, data: bytearray) -> None:
+    async def _handle_data(self, sender: BleakGATTCharacteristic, data: bytearray) -> None:
         """Parses notification data from the treadmill."""
         # AGENTS.md: Speed resolution 0.01 km/h (Bytes 3-4, Big Endian).
         if len(data) < 4:
@@ -79,6 +85,9 @@ class TreadmillClient:
             self.speed = raw_speed / 100.0
             # Assuming if we get data, it might mean it's running or at least active
             # self.is_running = self.speed > 0
+
+            if self._on_speed_change:
+                await self._on_speed_change(self.speed)
 
             # self._logger.debug(f"Received data: {data.hex()} -> Speed: {self.speed} km/h")
         except Exception as e:
