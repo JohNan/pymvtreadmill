@@ -3,11 +3,22 @@
 A modern Python 3.13+ library to control and read data from Mobvoi Home Treadmills and Horizon fitness devices.
 
 ## Features
-- **Real-time Reading**: Parses Speed, Distance, and Status directly from BLE notifications.
+- **Real-time Reading**: Parses Speed directly from BLE notifications.
 - **Modern Async**: Built on `asyncio` and `bleak`.
 - **Control**: Set target speed (km/h) via Python commands.
 - **Auto-Reconnect**: Robust connection handling for continuous use.
 - **Type Safe**: Fully typed with modern Python 3.13+ syntax.
+
+## Data Protocol
+
+The treadmill sends data as BLE notifications. Currently, only **Speed** is parsed.
+
+| Feature | Resolution | Protocol |
+|---|---|---|
+| Speed (Mobvoi) | 0.01 km/h | Bytes 3-4 (Big Endian) |
+| Speed (Horizon)| 0.1 km/h | Bytes 3-4 (Big Endian) |
+
+*Note: The current implementation defaults to Mobvoi resolution (0.01 km/h).*
 
 ## Installation
 
