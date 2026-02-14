@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pymvtreadmill"
+version = "0.1.0"
+authors = [{name = "Jules", email = "jules@example.com"}]
+description = "Modern Async driver for Mobvoi/Horizon treadmills (Python 3.13+)"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "bleak>=0.22.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=24.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0"
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+
+[tool.black]
+line-length = 100
+target-version = ['py313']
