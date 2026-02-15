@@ -1,13 +1,14 @@
-
 from unittest.mock import MagicMock
 import pytest
 from bleak.backends.characteristic import BleakGATTCharacteristic
 from pymvtreadmill.client import TreadmillClient
 
+
 @pytest.mark.asyncio
 async def test_handle_data_speed_only() -> None:
     # Mocking callbacks
     callback = MagicMock()
+
     async def on_speed_change(speed: float) -> None:
         callback(speed)
 
@@ -24,6 +25,7 @@ async def test_handle_data_speed_only() -> None:
     assert client.speed == 2.5
     callback.assert_called_with(2.5)
 
+
 @pytest.mark.asyncio
 async def test_handle_data_with_inclination() -> None:
     # Mocking callbacks
@@ -32,12 +34,12 @@ async def test_handle_data_with_inclination() -> None:
 
     async def on_speed_change(speed: float) -> None:
         speed_cb(speed)
+
     async def on_inclination_change(inclination: float) -> None:
         inclination_cb(inclination)
 
     client = TreadmillClient(
-        on_speed_change=on_speed_change,
-        on_inclination_change=on_inclination_change
+        on_speed_change=on_speed_change, on_inclination_change=on_inclination_change
     )
 
     # Flags: 00 08 (Bit 3 set -> Inclination present) (Big Endian)
@@ -55,6 +57,7 @@ async def test_handle_data_with_inclination() -> None:
 
     speed_cb.assert_called_with(2.5)
     inclination_cb.assert_called_with(1.0)
+
 
 @pytest.mark.asyncio
 async def test_handle_data_with_distance() -> None:
