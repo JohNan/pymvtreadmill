@@ -3,9 +3,12 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from pymvtreadmill.client import TreadmillClient
 from bleak.backends.device import BLEDevice
 
+
 @pytest.mark.asyncio
 async def test_find_device_by_filter_case_insensitive():
-    with patch("pymvtreadmill.client.BleakScanner.find_device_by_filter", new_callable=AsyncMock) as mock_find:
+    with patch(
+        "pymvtreadmill.client.BleakScanner.find_device_by_filter", new_callable=AsyncMock
+    ) as mock_find:
 
         # Setup a mock device to be returned so connect doesn't raise exception immediately
         mock_device = MagicMock(spec=BLEDevice)
@@ -15,13 +18,13 @@ async def test_find_device_by_filter_case_insensitive():
 
         # Setup BleakClient mock to avoid actual connection attempts
         with patch("pymvtreadmill.client.BleakClient") as MockBleakClient:
-             # Configure the instance returned by the constructor
-             mock_client_instance = MockBleakClient.return_value
-             mock_client_instance.connect = AsyncMock()
-             mock_client_instance.start_notify = AsyncMock()
+            # Configure the instance returned by the constructor
+            mock_client_instance = MockBleakClient.return_value
+            mock_client_instance.connect = AsyncMock()
+            mock_client_instance.start_notify = AsyncMock()
 
-             client = TreadmillClient(name_filter="Mobvoi")
-             await client.connect()
+            client = TreadmillClient(name_filter="Mobvoi")
+            await client.connect()
 
         # Get the filter function passed to find_device_by_filter
         # The call is: await BleakScanner.find_device_by_filter(lambda ...)
