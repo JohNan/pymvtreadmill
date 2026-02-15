@@ -53,7 +53,10 @@ class TreadmillClient:
             self._logger.info(f"Scanning for devices containing '{self._name_filter}'...")
             device = await BleakScanner.find_device_by_filter(
                 lambda d, _: d.name is not None
-                and (self._name_filter in d.name or "Home Treadmill" in d.name)
+                and (
+                    self._name_filter.lower() in d.name.lower()
+                    or "home treadmill" in d.name.lower()
+                )
             )
 
         if not device:
