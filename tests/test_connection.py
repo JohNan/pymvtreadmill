@@ -5,7 +5,7 @@ from bleak.backends.device import BLEDevice
 
 
 @pytest.mark.asyncio
-async def test_find_device_by_filter_case_insensitive():
+async def test_find_device_by_filter_case_insensitive() -> None:
     with patch(
         "pymvtreadmill.client.BleakScanner.find_device_by_filter", new_callable=AsyncMock
     ) as mock_find:
