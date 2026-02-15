@@ -8,6 +8,7 @@ A modern Python 3.13+ library to control and read data from Mobvoi Home Treadmil
 - **Control**: Set target speed (km/h) via Python commands.
 - **Auto-Reconnect**: Robust connection handling for continuous use.
 - **Type Safe**: Fully typed with modern Python 3.13+ syntax.
+- **MQTT Bridge**: Built-in CLI to bridge treadmill data to MQTT.
 
 ## Data Protocol
 
@@ -32,6 +33,25 @@ uv pip install pymvtreadmill
 pip install pymvtreadmill
 ```
 
+## MQTT Bridge (CLI)
+
+This package includes a command-line interface (CLI) to bridge treadmill data to an MQTT broker (e.g., for Home Assistant).
+
+### Usage
+```bash
+pymvtreadmill --help
+```
+
+### Arguments
+| Argument | Description | Default |
+|---|---|---|
+| `--treadmill-name` | Name filter for the treadmill | `Mobvoi` |
+| `--mqtt-host` | MQTT broker hostname (Required for MQTT) | - |
+| `--mqtt-port` | MQTT broker port | `1883` |
+| `--mqtt-username` | MQTT username | - |
+| `--mqtt-password` | MQTT password | - |
+| `--mqtt-topic` | MQTT topic for speed | `homeassistant/sensor/treadmill/speed/state` |
+
 ## Running with Docker
 
 You can run the project using Docker. This is useful if you want to run the treadmill controller in an isolated environment.
@@ -45,29 +65,47 @@ You can run the project using Docker. This is useful if you want to run the trea
 docker build -t pymvtreadmill .
 ```
 
-### Running the Container
+### Running the CLI
 To access the Bluetooth adapter from within the container, you need to share the DBus socket and run in privileged mode (or with `NET_ADMIN` capabilities).
 
+By default, the container runs the `pymvtreadmill` CLI. You can pass arguments directly to it.
+
 ```bash
+# Show help
+docker run --rm -it pymvtreadmill --help
+
+# Run as MQTT Bridge
 docker run --rm -it \
   --net=host \
   --privileged \
   -v /var/run/dbus:/var/run/dbus \
-  pymvtreadmill
+  pymvtreadmill --mqtt-host 192.168.1.100 --mqtt-username myuser --mqtt-password mypass
 ```
 
-The default command runs the example script `examples/basic_run.py`. To run a custom script, you can mount it:
+### Running Custom Scripts
+If you want to run a custom python script (like the examples), you need to override the entrypoint:
 
 ```bash
 docker run --rm -it \
+  --entrypoint python \
   --net=host \
   --privileged \
   -v /var/run/dbus:/var/run/dbus \
   -v $(pwd)/my_script.py:/app/my_script.py \
-  pymvtreadmill python my_script.py
+  pymvtreadmill my_script.py
 ```
 
-## Usage
+## Docker Compose
+
+For a more permanent setup, you can use the provided `docker-compose.yml` file.
+
+1. Edit `docker-compose.yml` to set your MQTT broker details in the `command` section.
+2. Run:
+   ```bash
+   docker-compose up -d
+   ```
+
+## Usage (Library)
 
 ```python
 import asyncio
