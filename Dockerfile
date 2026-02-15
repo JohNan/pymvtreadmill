@@ -22,7 +22,7 @@ RUN pip install uv
 WORKDIR /app
 
 # Copy dependency definition files first to leverage Docker cache
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 
 # Create a virtual environment
 RUN uv venv /opt/venv
