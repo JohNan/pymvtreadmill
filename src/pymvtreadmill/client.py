@@ -21,14 +21,20 @@ class TreadmillClient:
         name_filter: str = "Mobvoi",
         on_speed_change: Callable[[float], Awaitable[None]] | None = None,
         on_raw_data: Callable[[bytes], Awaitable[None]] | None = None,
+        on_inclination_change: Callable[[float], Awaitable[None]] | None = None,
+        on_distance_change: Callable[[int], Awaitable[None]] | None = None,
     ) -> None:
         self.client: BleakClient | None = None
         self.speed: float = 0.0
+        self.inclination: float | None = None
+        self.distance: int | None = None
         self.is_running: bool = False
         self._last_raw_data: bytes | None = None
         self._name_filter = name_filter
         self._on_speed_change = on_speed_change
         self._on_raw_data = on_raw_data
+        self._on_inclination_change = on_inclination_change
+        self._on_distance_change = on_distance_change
         # Configure logging to standard out for this script
         self._logger = logging.getLogger("pymvtreadmill")
 
@@ -100,6 +106,17 @@ class TreadmillClient:
             return
 
         try:
+            # Parse Flags (Bytes 1-2, Big Endian)
+            flags = struct.unpack(">H", data[0:2])[0]
+
+            # Bit 1: Average Speed Present
+            avg_speed_present = bool(flags & 0x0002)
+            # Bit 2: Total Distance Present
+            total_distance_present = bool(flags & 0x0004)
+            # Bit 3: Inclination and Ramp Angle Setting Present
+            inclination_present = bool(flags & 0x0008)
+
+            # Speed is always present at bytes 3-4 (index 2-3)
             # Bytes 3-4 (1-based) -> index 2 and 3 (0-based)
             raw_speed = struct.unpack(">H", data[2:4])[0]
             self.speed = raw_speed / 100.0
@@ -109,7 +126,34 @@ class TreadmillClient:
             if self._on_speed_change:
                 await self._on_speed_change(self.speed)
 
-            self._logger.debug(f"Received data: {data.hex()} -> Speed: {self.speed} km/h")
+            index = 4
+
+            # Skip Average Speed if present (2 bytes)
+            if avg_speed_present:
+                index += 2
+
+            # Parse Total Distance if present (3 bytes)
+            if total_distance_present and len(data) >= index + 3:
+                # 3 bytes, Big Endian
+                dist_bytes = data[index : index + 3]
+                self.distance = (dist_bytes[0] << 16) | (dist_bytes[1] << 8) | dist_bytes[2]
+                index += 3
+                if self._on_distance_change:
+                    await self._on_distance_change(self.distance)
+
+            # Parse Inclination if present (2 bytes) + Ramp Angle (2 bytes)
+            if inclination_present and len(data) >= index + 4:
+                # Inclination is signed 16-bit, 0.1% resolution
+                raw_inclination = struct.unpack(">h", data[index : index + 2])[0]
+                self.inclination = raw_inclination / 10.0
+                index += 4  # Skip Ramp Angle (2 bytes) which follows Inclination
+                if self._on_inclination_change:
+                    await self._on_inclination_change(self.inclination)
+
+            self._logger.debug(
+                f"Received data: {data.hex()} -> Speed: {self.speed} km/h, "
+                f"Inclination: {self.inclination}%, Distance: {self.distance}m"
+            )
         except Exception as e:
             self._logger.error(f"Failed to parse data {data.hex()}: {e}")
 
