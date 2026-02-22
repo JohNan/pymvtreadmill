@@ -7,6 +7,7 @@ from contextlib import AsyncExitStack
 
 import aiomqtt
 from pymvtreadmill.client import TreadmillClient
+from pymvtreadmill.mqtt import TreadmillMQTT
 
 # Configure logging
 logging.basicConfig(
@@ -72,6 +73,7 @@ async def main() -> None:
     # Exit stack to manage async context managers (MQTT, Treadmill)
     async with AsyncExitStack() as stack:
         mqtt_client: aiomqtt.Client | None = None
+        treadmill_mqtt: TreadmillMQTT | None = None
 
         if args.mqtt_host:
             logger.info(f"Connecting to MQTT broker at {args.mqtt_host}:{args.mqtt_port}...")
@@ -91,16 +93,42 @@ async def main() -> None:
         async def on_speed_change(speed: float) -> None:
             logger.info(f"Speed update: {speed:.2f} km/h")
             if mqtt_client:
+                # Legacy simple topic
                 try:
                     await mqtt_client.publish(args.mqtt_topic, payload=f"{speed:.2f}")
                 except Exception as e:
                     logger.error(f"Failed to publish to MQTT: {e}")
+
+                # Home Assistant Discovery
+                if treadmill_mqtt:
+                    try:
+                        await treadmill_mqtt.publish_state()
+                    except Exception as e:
+                        logger.error(f"Failed to publish state: {e}")
+
+        async def on_inclination_change(inclination: float) -> None:
+            logger.info(f"Inclination update: {inclination:.1f} %")
+            if treadmill_mqtt:
+                try:
+                    await treadmill_mqtt.publish_state()
+                except Exception as e:
+                    logger.error(f"Failed to publish state: {e}")
+
+        async def on_distance_change(distance: int) -> None:
+            # Only log every 100m or so? No, fine for now.
+            if treadmill_mqtt:
+                try:
+                    await treadmill_mqtt.publish_state()
+                except Exception as e:
+                    logger.error(f"Failed to publish state: {e}")
 
         logger.info(f"Connecting to treadmill matching '{args.treadmill_name}'...")
 
         client = TreadmillClient(
             name_filter=args.treadmill_name,
             on_speed_change=on_speed_change,
+            on_inclination_change=on_inclination_change,
+            on_distance_change=on_distance_change,
         )
 
         connected = False
@@ -120,8 +148,17 @@ async def main() -> None:
                     pass
 
         if connected:
+            if mqtt_client:
+                treadmill_mqtt = TreadmillMQTT(client, mqtt_client)
+                await treadmill_mqtt.publish_discovery()
+                await treadmill_mqtt.publish_availability(True)
+                await treadmill_mqtt.publish_state()
+
             await stop_event.wait()
             logger.info("Shutting down...")
+
+            if treadmill_mqtt:
+                await treadmill_mqtt.publish_availability(False)
 
 
 def run() -> None:
