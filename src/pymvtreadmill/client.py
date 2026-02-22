@@ -84,20 +84,20 @@ class TreadmillClient:
         # Determine protocol based on available services
         services = self.client.services
         if services.get_service(TreadmillUUID.FTMS_SERVICE):
-             self._logger.info("Detected FTMS Service (Standard).")
-             self._protocol = "ftms"
-             self._read_char = TreadmillUUID.FTMS_DATA
-             self._write_char = TreadmillUUID.FTMS_CONTROL
+            self._logger.info("Detected FTMS Service (Standard).")
+            self._protocol = "ftms"
+            self._read_char = TreadmillUUID.FTMS_DATA
+            self._write_char = TreadmillUUID.FTMS_CONTROL
         elif services.get_service(TreadmillUUID.SERVICE):
-             self._logger.info("Detected Proprietary Service (Mobvoi).")
-             self._protocol = "proprietary"
-             self._read_char = TreadmillUUID.READ
-             self._write_char = TreadmillUUID.WRITE
+            self._logger.info("Detected Proprietary Service (Mobvoi).")
+            self._protocol = "proprietary"
+            self._read_char = TreadmillUUID.READ
+            self._write_char = TreadmillUUID.WRITE
         else:
-             self._logger.warning("No known service found, defaulting to proprietary.")
-             self._protocol = "proprietary"
-             self._read_char = TreadmillUUID.READ
-             self._write_char = TreadmillUUID.WRITE
+            self._logger.warning("No known service found, defaulting to proprietary.")
+            self._protocol = "proprietary"
+            self._read_char = TreadmillUUID.READ
+            self._write_char = TreadmillUUID.WRITE
 
         # Start listening
         await self.client.start_notify(self._read_char, self._handle_data)
@@ -120,13 +120,13 @@ class TreadmillClient:
         val = int(speed_kmh * 100)
 
         if self._protocol == "ftms":
-             # FTMS: Op Code 0x02 (Set Target Speed), Speed (uint16, Little Endian)
-             # Packet: [0x02, Low, High]
-             payload = struct.pack("<BH", 0x02, val)
+            # FTMS: Op Code 0x02 (Set Target Speed), Speed (uint16, Little Endian)
+            # Packet: [0x02, Low, High]
+            payload = struct.pack("<BH", 0x02, val)
         else:
-             # Proprietary: [0x02, High, Low, Spacer]
-             # Big Endian
-             payload = struct.pack(">BHB", 0x02, val, 0x00)
+            # Proprietary: [0x02, High, Low, Spacer]
+            # Big Endian
+            payload = struct.pack(">BHB", 0x02, val, 0x00)
 
         await self.client.write_gatt_char(self._write_char, payload)
 
@@ -175,11 +175,11 @@ class TreadmillClient:
                 # 3 bytes
                 dist_bytes = data[index : index + 3]
                 if is_ftms:
-                     # Little Endian 24-bit
-                     self.distance = dist_bytes[0] | (dist_bytes[1] << 8) | (dist_bytes[2] << 16)
+                    # Little Endian 24-bit
+                    self.distance = dist_bytes[0] | (dist_bytes[1] << 8) | (dist_bytes[2] << 16)
                 else:
-                     # Big Endian 24-bit
-                     self.distance = (dist_bytes[0] << 16) | (dist_bytes[1] << 8) | dist_bytes[2]
+                    # Big Endian 24-bit
+                    self.distance = (dist_bytes[0] << 16) | (dist_bytes[1] << 8) | dist_bytes[2]
                 index += 3
                 if self._on_distance_change:
                     await self._on_distance_change(self.distance)
