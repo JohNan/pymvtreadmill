@@ -129,9 +129,9 @@ class TreadmillMQTT:
 
         payload = {
             "speed": self.treadmill.speed,
-            "inclination": self.treadmill.inclination
-            if self.treadmill.inclination is not None
-            else 0.0,
+            "inclination": (
+                self.treadmill.inclination if self.treadmill.inclination is not None else 0.0
+            ),
             "distance": self.treadmill.distance if self.treadmill.distance is not None else 0,
         }
         topic = f"{self.discovery_prefix}/sensor/treadmill_{self.device_id}/state"

@@ -76,9 +76,7 @@ async def main() -> None:
         treadmill_mqtt: TreadmillMQTT | None = None
 
         if args.mqtt_host:
-            logger.info(
-                f"Connecting to MQTT broker at {args.mqtt_host}:{args.mqtt_port}..."
-            )
+            logger.info(f"Connecting to MQTT broker at {args.mqtt_host}:{args.mqtt_port}...")
             mqtt_client = aiomqtt.Client(
                 hostname=args.mqtt_host,
                 port=args.mqtt_port,

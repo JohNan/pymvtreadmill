@@ -5,6 +5,7 @@ from pymvtreadmill.mqtt import TreadmillMQTT
 from pymvtreadmill.client import TreadmillClient
 import aiomqtt
 
+
 @pytest.mark.asyncio
 async def test_publish_discovery() -> None:
     # Mock TreadmillClient
@@ -30,14 +31,15 @@ async def test_publish_discovery() -> None:
     # Check 1st call (Speed)
     call_args = mqtt_client.publish.call_args_list[0]
     args, kwargs = call_args
-    topic = args[0] if args else kwargs['topic']
-    payload = kwargs.get('payload')
+    topic = args[0] if args else kwargs["topic"]
+    payload = kwargs.get("payload")
 
     assert topic == "homeassistant/sensor/treadmill_aabbccddeeff_speed/config"
     config = json.loads(payload)
     assert config["name"] == "Speed"
     assert config["unique_id"] == "treadmill_aabbccddeeff_speed"
     assert config["device"]["identifiers"] == ["treadmill_aabbccddeeff"]
+
 
 @pytest.mark.asyncio
 async def test_publish_state() -> None:
@@ -57,8 +59,8 @@ async def test_publish_state() -> None:
 
     call_args = mqtt_client.publish.call_args_list[0]
     args, kwargs = call_args
-    topic = args[0] if args else kwargs['topic']
-    payload = kwargs.get('payload')
+    topic = args[0] if args else kwargs["topic"]
+    payload = kwargs.get("payload")
 
     assert topic == "homeassistant/sensor/treadmill_aabbccddeeff/state"
     state = json.loads(payload)
@@ -66,11 +68,12 @@ async def test_publish_state() -> None:
     assert state["inclination"] == 2.0
     assert state["distance"] == 100
 
+
 @pytest.mark.asyncio
 async def test_device_id_sanitization() -> None:
     treadmill = MagicMock(spec=TreadmillClient)
     treadmill.client = MagicMock()
-    treadmill.client.address = "11-22-33-44-55-66" # MacOS style
+    treadmill.client.address = "11-22-33-44-55-66"  # MacOS style
 
     mqtt_client = MagicMock(spec=aiomqtt.Client)
 
