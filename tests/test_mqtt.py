@@ -21,8 +21,8 @@ async def test_publish_discovery() -> None:
 
     await mqtt.publish_discovery()
 
-    # Check if publish was called 4 times (speed, inclination, distance, connectivity)
-    assert mqtt_client.publish.call_count == 4
+    # Check if publish was called 6 times (speed, inclination, distance, total_distance, last_run, connectivity)
+    assert mqtt_client.publish.call_count == 6
 
     # Verify speed config
     # publish(topic, payload=..., retain=True) or publish(topic=..., ...)
@@ -49,6 +49,8 @@ async def test_publish_state() -> None:
     treadmill.speed = 5.5
     treadmill.inclination = 2.0
     treadmill.distance = 100
+    treadmill.total_distance = 500
+    treadmill.last_run_distance = 400
 
     mqtt_client = MagicMock(spec=aiomqtt.Client)
     mqtt_client.publish = AsyncMock()
@@ -67,6 +69,8 @@ async def test_publish_state() -> None:
     assert state["speed"] == 5.5
     assert state["inclination"] == 2.0
     assert state["distance"] == 100
+    assert state["total_distance"] == 500
+    assert state["last_run_distance"] == 400
 
 
 @pytest.mark.asyncio
