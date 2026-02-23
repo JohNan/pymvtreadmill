@@ -1,9 +1,9 @@
 import asyncio
 import logging
 import struct
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from types import TracebackType
-from typing import Self
+from typing import Any, Self
 
 from bleak import BleakClient, BleakScanner
 from bleak.backends.device import BLEDevice
@@ -14,8 +14,6 @@ from .exceptions import TreadmillConnectionError
 
 # Modern Type Alias (Python 3.12+)
 type TreadmillData = bytearray | bytes
-from collections.abc import Coroutine
-from typing import Any
 
 
 class TreadmillClient:
