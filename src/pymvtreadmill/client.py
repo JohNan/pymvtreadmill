@@ -27,12 +27,12 @@ class TreadmillClient:
         on_disconnect: Callable[[], Coroutine[Any, Any, None]] | None = None,
     ) -> None:
         self.client: BleakClient | None = None
-        self.speed: float = 0.0
-        self.inclination: float | None = None
-        self.distance: int | None = None
-        self.total_distance: int = 0
-        self.last_run_distance: int | None = None
-        self.is_running: bool = False
+        self._speed: float = 0.0
+        self._inclination: float | None = None
+        self._distance: int | None = None
+        self._total_distance: int = 0
+        self._last_run_distance: int | None = None
+        self._is_running: bool = False
         self._last_raw_data: bytes | None = None
         self._name_filter = name_filter
         self._on_speed_change = on_speed_change
@@ -50,19 +50,51 @@ class TreadmillClient:
         self._logger = logging.getLogger("pymvtreadmill")
 
     @property
+    def speed(self) -> float:
+        """Current speed in km/h."""
+        return self._speed
+
+    @property
+    def inclination(self) -> float | None:
+        """Current inclination in percentage (0.0 - 15.0+)."""
+        return self._inclination
+
+    @property
+    def distance(self) -> int | None:
+        """Current session distance in meters."""
+        return self._distance
+
+    @property
+    def total_distance(self) -> int:
+        """Total accumulated distance in meters across sessions (since client start)."""
+        return self._total_distance
+
+    @property
+    def last_run_distance(self) -> int | None:
+        """The distance of the last run session in meters."""
+        return self._last_run_distance
+
+    @property
+    def is_running(self) -> bool:
+        """Whether the treadmill is currently running."""
+        return self._is_running
+
+    @property
     def last_raw_data(self) -> bytes | None:
         """Returns the last received raw data packet."""
         return self._last_raw_data
 
-    async def connect(self, address: str | None = None) -> Self:
+    async def connect(self, device: BLEDevice | str | None = None) -> Self:
         """Connects to the treadmill. Returns self for chaining."""
-        device: BLEDevice | None = None
+        ble_device: BLEDevice | None = None
 
-        if address:
-            device = await BleakScanner.find_device_by_address(address)
+        if isinstance(device, BLEDevice):
+            ble_device = device
+        elif isinstance(device, str):
+            ble_device = await BleakScanner.find_device_by_address(device)
         else:
             self._logger.info(f"Scanning for devices containing '{self._name_filter}'...")
-            device = await BleakScanner.find_device_by_filter(
+            ble_device = await BleakScanner.find_device_by_filter(
                 lambda d, _: d.name is not None
                 and (
                     self._name_filter.lower() in d.name.lower()
@@ -70,12 +102,17 @@ class TreadmillClient:
                 )
             )
 
-        if not device:
-            raise TreadmillConnectionError(f"No device found matching '{self._name_filter}'.")
+        if not ble_device:
+            msg = (
+                f"Device with address {device} not found."
+                if isinstance(device, str)
+                else f"No device found matching '{self._name_filter}'."
+            )
+            raise TreadmillConnectionError(msg)
 
-        self.client = BleakClient(device, disconnected_callback=self._on_disconnect)
+        self.client = BleakClient(ble_device, disconnected_callback=self._on_disconnect)
         await self.client.connect()
-        self._logger.info(f"Connected to {device.name} ({device.address})")
+        self._logger.info(f"Connected to {ble_device.name} ({ble_device.address})")
 
         # Log all services and characteristics for discovery
         self._logger.info("Discovered Services:")
@@ -162,12 +199,12 @@ class TreadmillClient:
             # Speed is always present at bytes 3-4 (index 2-3)
             # Bytes 3-4 (1-based) -> index 2 and 3 (0-based)
             raw_speed = struct.unpack(f"{endian}H", data[2:4])[0]
-            self.speed = raw_speed / 100.0
+            self._speed = raw_speed / 100.0
             # Assuming if we get data, it might mean it's running or at least active
-            # self.is_running = self.speed > 0
+            # self._is_running = self._speed > 0
 
             if self._on_speed_change:
-                await self._on_speed_change(self.speed)
+                await self._on_speed_change(self._speed)
 
             index = 4
 
@@ -186,38 +223,38 @@ class TreadmillClient:
                     # Big Endian 24-bit
                     new_distance = (dist_bytes[0] << 16) | (dist_bytes[1] << 8) | dist_bytes[2]
 
-                if self.distance is not None:
-                    if new_distance >= self.distance:
+                if self._distance is not None:
+                    if new_distance >= self._distance:
                         # Normal increment
-                        self.total_distance += new_distance - self.distance
+                        self._total_distance += new_distance - self._distance
                     else:
-                        # Reset detected (new_distance < self.distance)
+                        # Reset detected (new_distance < self._distance)
                         # Save the last run distance if it was non-zero
-                        if self.distance > 0:
-                            self.last_run_distance = self.distance
+                        if self._distance > 0:
+                            self._last_run_distance = self._distance
                         # Accumulate the new distance (assuming reset to 0 then up to new_distance)
-                        self.total_distance += new_distance
+                        self._total_distance += new_distance
                 else:
                     # First packet received
-                    self.total_distance = new_distance
+                    self._total_distance = new_distance
 
-                self.distance = new_distance
+                self._distance = new_distance
                 index += 3
                 if self._on_distance_change:
-                    await self._on_distance_change(self.distance)
+                    await self._on_distance_change(self._distance)
 
             # Parse Inclination if present (2 bytes) + Ramp Angle (2 bytes)
             if inclination_present and len(data) >= index + 4:
                 # Inclination is signed 16-bit, 0.1% resolution
                 raw_inclination = struct.unpack(f"{endian}h", data[index : index + 2])[0]
-                self.inclination = raw_inclination / 10.0
+                self._inclination = raw_inclination / 10.0
                 index += 4  # Skip Ramp Angle (2 bytes) which follows Inclination
                 if self._on_inclination_change:
-                    await self._on_inclination_change(self.inclination)
+                    await self._on_inclination_change(self._inclination)
 
             self._logger.debug(
-                f"Received data ({self._protocol}): {data.hex()} -> Speed: {self.speed} km/h, "
-                f"Inclination: {self.inclination}%, Distance: {self.distance}m"
+                f"Received data ({self._protocol}): {data.hex()} -> Speed: {self._speed} km/h, "
+                f"Inclination: {self._inclination}%, Distance: {self._distance}m"
             )
         except Exception as e:
             self._logger.error(f"Failed to parse data {data.hex()}: {e}")
@@ -225,7 +262,7 @@ class TreadmillClient:
     def _on_disconnect(self, client: BleakClient) -> None:
         """Callback when the client disconnects."""
         self._logger.warning(f"Disconnected from {client.address}")
-        self.is_running = False
+        self._is_running = False
         if self._on_disconnect_callback:
             # Bleak's disconnected_callback is synchronous, but we need to run async code.
             # We schedule the callback as a task on the current loop.
