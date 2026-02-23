@@ -28,6 +28,8 @@ class TreadmillClient:
         self.speed: float = 0.0
         self.inclination: float | None = None
         self.distance: int | None = None
+        self.total_distance: int = 0
+        self.last_run_distance: int | None = None
         self.is_running: bool = False
         self._last_raw_data: bytes | None = None
         self._name_filter = name_filter
@@ -176,10 +178,27 @@ class TreadmillClient:
                 dist_bytes = data[index : index + 3]
                 if is_ftms:
                     # Little Endian 24-bit
-                    self.distance = dist_bytes[0] | (dist_bytes[1] << 8) | (dist_bytes[2] << 16)
+                    new_distance = dist_bytes[0] | (dist_bytes[1] << 8) | (dist_bytes[2] << 16)
                 else:
                     # Big Endian 24-bit
-                    self.distance = (dist_bytes[0] << 16) | (dist_bytes[1] << 8) | dist_bytes[2]
+                    new_distance = (dist_bytes[0] << 16) | (dist_bytes[1] << 8) | dist_bytes[2]
+
+                if self.distance is not None:
+                    if new_distance >= self.distance:
+                        # Normal increment
+                        self.total_distance += new_distance - self.distance
+                    else:
+                        # Reset detected (new_distance < self.distance)
+                        # Save the last run distance if it was non-zero
+                        if self.distance > 0:
+                            self.last_run_distance = self.distance
+                        # Accumulate the new distance (assuming reset to 0 then up to new_distance)
+                        self.total_distance += new_distance
+                else:
+                    # First packet received
+                    self.total_distance = new_distance
+
+                self.distance = new_distance
                 index += 3
                 if self._on_distance_change:
                     await self._on_distance_change(self.distance)

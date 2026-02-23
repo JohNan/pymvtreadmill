@@ -104,6 +104,43 @@ class TreadmillMQTT:
             retain=True,
         )
 
+        # Total Distance Sensor (Persistent/Cumulative)
+        total_distance_config = {
+            "name": "Total Distance",
+            "unique_id": f"treadmill_{self.device_id}_total_distance",
+            "state_topic": state_topic,
+            "availability_topic": availability_topic,
+            "value_template": "{{ value_json.total_distance }}",
+            "unit_of_measurement": "m",
+            "device_class": "distance",
+            "state_class": "total",
+            "icon": "mdi:counter",
+            "device": device_info,
+        }
+        await self.mqtt.publish(
+            f"{self.discovery_prefix}/sensor/treadmill_{self.device_id}_total_distance/config",
+            payload=json.dumps(total_distance_config),
+            retain=True,
+        )
+
+        # Last Run Distance Sensor
+        last_run_config = {
+            "name": "Last Run Distance",
+            "unique_id": f"treadmill_{self.device_id}_last_run_distance",
+            "state_topic": state_topic,
+            "availability_topic": availability_topic,
+            "value_template": "{{ value_json.last_run_distance }}",
+            "unit_of_measurement": "m",
+            "device_class": "distance",
+            "icon": "mdi:history",
+            "device": device_info,
+        }
+        await self.mqtt.publish(
+            f"{self.discovery_prefix}/sensor/treadmill_{self.device_id}_last_run_distance/config",
+            payload=json.dumps(last_run_config),
+            retain=True,
+        )
+
         # Connectivity Binary Sensor
         connectivity_config = {
             "name": "Connectivity",
@@ -133,6 +170,8 @@ class TreadmillMQTT:
                 self.treadmill.inclination if self.treadmill.inclination is not None else 0.0
             ),
             "distance": self.treadmill.distance if self.treadmill.distance is not None else 0,
+            "total_distance": self.treadmill.total_distance,
+            "last_run_distance": self.treadmill.last_run_distance,
         }
         topic = f"{self.discovery_prefix}/sensor/treadmill_{self.device_id}/state"
         await self.mqtt.publish(topic, payload=json.dumps(payload))
