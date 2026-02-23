@@ -112,16 +112,45 @@ import asyncio
 from pymvtreadmill import TreadmillClient
 
 async def main():
+    # You can connect by:
+    # 1. Scanning (default): TreadmillClient()
+    # 2. Address: TreadmillClient().connect("AA:BB:CC:DD:EE:FF")
+    # 3. BLEDevice: TreadmillClient().connect(ble_device)
+
     async with TreadmillClient() as client:
-        print("Connected!")
+        print(f"Connected to {client.client.address}")
+
+        # Read properties
+        print(f"Speed: {client.speed} km/h")
+        print(f"Inclination: {client.inclination}%")
+        print(f"Distance: {client.distance} m")
+
         # Set speed to 2.5 km/h
         await client.set_speed(2.5)
+
         # Keep running for a bit
         await asyncio.sleep(10)
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+### API Reference
+
+#### `TreadmillClient`
+
+**Properties (Read-Only):**
+- `speed` (float): Current speed in km/h.
+- `inclination` (float | None): Current inclination percentage (0.0 - 15.0+).
+- `distance` (int | None): Current session distance in meters.
+- `total_distance` (int): Total accumulated distance in meters across sessions.
+- `last_run_distance` (int | None): Distance of the last completed run session.
+- `is_running` (bool): Whether the treadmill is currently active.
+
+**Methods:**
+- `connect(device: BLEDevice | str | None = None)`: Connects to the treadmill. Accepts a `bleak.backends.device.BLEDevice`, a MAC address string, or `None` (triggers a scan).
+- `disconnect()`: Disconnects from the device.
+- `set_speed(speed_kmh: float)`: Sets the target speed in km/h.
 
 ## Development
 
