@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import struct
 from collections.abc import Awaitable, Callable
@@ -13,6 +14,8 @@ from .exceptions import TreadmillConnectionError
 
 # Modern Type Alias (Python 3.12+)
 type TreadmillData = bytearray | bytes
+from collections.abc import Coroutine
+from typing import Any
 
 
 class TreadmillClient:
@@ -23,7 +26,7 @@ class TreadmillClient:
         on_raw_data: Callable[[bytes], Awaitable[None]] | None = None,
         on_inclination_change: Callable[[float], Awaitable[None]] | None = None,
         on_distance_change: Callable[[int], Awaitable[None]] | None = None,
-        on_disconnect: Callable[[], Awaitable[None]] | None = None,
+        on_disconnect: Callable[[], Coroutine[Any, Any, None]] | None = None,
     ) -> None:
         self.client: BleakClient | None = None
         self.speed: float = 0.0
@@ -221,12 +224,19 @@ class TreadmillClient:
         except Exception as e:
             self._logger.error(f"Failed to parse data {data.hex()}: {e}")
 
-    async def _on_disconnect(self, client: BleakClient) -> None:
+    def _on_disconnect(self, client: BleakClient) -> None:
         """Callback when the client disconnects."""
         self._logger.warning(f"Disconnected from {client.address}")
         self.is_running = False
         if self._on_disconnect_callback:
-            await self._on_disconnect_callback()
+            # Bleak's disconnected_callback is synchronous, but we need to run async code.
+            # We schedule the callback as a task on the current loop.
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._on_disconnect_callback())
+            except RuntimeError:
+                # If there's no running loop, we can't schedule the task.
+                self._logger.error("Could not schedule disconnect callback: no running loop")
 
     async def __aenter__(self) -> Self:
         return await self.connect()
