@@ -23,6 +23,7 @@ class TreadmillClient:
         on_raw_data: Callable[[bytes], Awaitable[None]] | None = None,
         on_inclination_change: Callable[[float], Awaitable[None]] | None = None,
         on_distance_change: Callable[[int], Awaitable[None]] | None = None,
+        on_disconnect: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self.client: BleakClient | None = None
         self.speed: float = 0.0
@@ -37,6 +38,7 @@ class TreadmillClient:
         self._on_raw_data = on_raw_data
         self._on_inclination_change = on_inclination_change
         self._on_distance_change = on_distance_change
+        self._on_disconnect_callback = on_disconnect
 
         # Protocol detection
         self._protocol: str | None = None  # "ftms" or "proprietary"
@@ -219,10 +221,12 @@ class TreadmillClient:
         except Exception as e:
             self._logger.error(f"Failed to parse data {data.hex()}: {e}")
 
-    def _on_disconnect(self, client: BleakClient) -> None:
+    async def _on_disconnect(self, client: BleakClient) -> None:
         """Callback when the client disconnects."""
         self._logger.warning(f"Disconnected from {client.address}")
         self.is_running = False
+        if self._on_disconnect_callback:
+            await self._on_disconnect_callback()
 
     async def __aenter__(self) -> Self:
         return await self.connect()

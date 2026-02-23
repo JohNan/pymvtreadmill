@@ -75,6 +75,13 @@ async def main() -> None:
         mqtt_client: aiomqtt.Client | None = None
         treadmill_mqtt: TreadmillMQTT | None = None
 
+        async def on_disconnect() -> None:
+            if treadmill_mqtt:
+                try:
+                    await treadmill_mqtt.publish_availability(False)
+                except Exception as e:
+                    logger.error(f"Failed to publish availability on disconnect: {e}")
+
         if args.mqtt_host:
             logger.info(f"Connecting to MQTT broker at {args.mqtt_host}:{args.mqtt_port}...")
             mqtt_client = aiomqtt.Client(
@@ -129,6 +136,7 @@ async def main() -> None:
             on_speed_change=on_speed_change,
             on_inclination_change=on_inclination_change,
             on_distance_change=on_distance_change,
+            on_disconnect=on_disconnect,
         )
 
         connected = False
